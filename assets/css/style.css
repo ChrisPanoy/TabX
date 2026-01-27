@@ -25,8 +25,12 @@
     /* Slate 500 */
     --success: #10b981;
     /* Emerald 500 */
+    --success-subtle: #d1fae5;
+    /* Emerald 100 */
     --danger: #ef4444;
     /* Red 500 */
+    --danger-subtle: #fee2e2;
+    /* Red 100 */
     --warning: #f59e0b;
     /* Amber 500 */
     --font-heading: 'Outfit', sans-serif;

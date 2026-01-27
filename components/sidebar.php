@@ -51,6 +51,22 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <span class="menu-icon"></span>
                 <span class="menu-text">Evaluation History</span>
             </a>
+        <?php elseif($role === 'student'): ?>
+            <div class="menu-section">Overview</div>
+            <a href="<?= $base_path ?>student/dashboard.php" class="menu-item <?= $current_page == 'dashboard.php' ? 'active' : '' ?>">
+                <span class="menu-icon"></span>
+                <span class="menu-text">Dashboard</span>
+            </a>
+            
+            <div class="menu-section">Team Management</div>
+            <a href="<?= $base_path ?>student/members.php" class="menu-item <?= $current_page == 'members.php' ? 'active' : '' ?>">
+                <span class="menu-icon"></span>
+                <span class="menu-text">Group Members</span>
+            </a>
+            <a href="<?= $base_path ?>student/artifacts.php" class="menu-item <?= $current_page == 'artifacts.php' ? 'active' : '' ?>">
+                <span class="menu-icon"></span>
+                <span class="menu-text">Capstone Project</span>
+            </a>
         <?php endif; ?>
     </nav>
 

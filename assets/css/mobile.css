@@ -1,0 +1,454 @@
+/* ==========================================================================
+   TabulationX - Mobile & Responsive Optimization System
+   Modified to be fully responsive without breaking existing structure.
+   ========================================================================== */
+
+/* --- Base Variables & Radius --- */
+:root {
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+}
+
+@media (max-width: 768px) {
+    :root {
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+    }
+}
+
+/* --- Container Adjustments --- */
+.container {
+    width: 100%;
+    padding: 0 1.25rem;
+}
+
+/* --- Sidebar Mobile Optimization --- */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 280px;
+        transform: translateX(-110%);
+        /* Extra offset for shadow */
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 20px 0 50px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Backdrop when sidebar is active */
+    .app-container::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    body:has(.sidebar.active) .app-container::before {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .main-wrapper {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+}
+
+/* --- Topbar Optimization --- */
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0 1rem !important;
+        height: 65px !important;
+    }
+
+    .sidebar-toggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: var(--primary-subtle);
+        border-radius: 10px;
+        color: var(--primary);
+    }
+
+    .page-title-badge {
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.75rem !important;
+    }
+
+    .user-info {
+        display: none !important;
+    }
+
+    .divider {
+        margin: 0 0.5rem !important;
+    }
+
+    .logout-text {
+        display: none !important;
+    }
+}
+
+/* --- Content Body Padding --- */
+@media (max-width: 768px) {
+    .content-body {
+        padding: 1.5rem 1rem 4rem !important;
+    }
+}
+
+/* --- Grid & Card Systems --- */
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem !important;
+    }
+
+    .grid-2-col,
+    .grid-3-col {
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem !important;
+    }
+
+    .card {
+        padding: 1.5rem !important;
+    }
+}
+
+/* --- Stats Cards Optimization --- */
+@media (max-width: 768px) {
+    .stat-card {
+        padding: 1.75rem 1.5rem !important;
+    }
+
+    .stat-value {
+        font-size: 2.25rem !important;
+        margin: 0.75rem 0 !important;
+    }
+
+    .stat-card .btn {
+        margin-top: 1.5rem !important;
+    }
+}
+
+/* --- Page Header Optimization --- */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1.5rem !important;
+        margin-bottom: 2rem !important;
+    }
+
+    .page-header h1 {
+        font-size: 1.75rem !important;
+    }
+
+    .page-header p {
+        font-size: 1rem !important;
+    }
+
+    .page-header>div {
+        width: 100% !important;
+    }
+
+    /* Handle inline-styled flex containers in headers */
+    .page-header [style*="display: flex"],
+    .page-header [style*="display:flex"] {
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        flex-direction: row !important;
+        /* Allow side-by-side if they fit, but stacking is handled by width:100% on children */
+    }
+
+    .page-header div,
+    .page-header a.btn {
+        width: 100% !important;
+    }
+}
+
+/* --- Form Elements Reset & Optimization --- */
+@media (max-width: 768px) {
+
+    /* Target common form structures */
+    form[style*="display: grid"],
+    .form-row,
+    .form-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        background-color: var(--surface) !important;
+        padding: 1.5rem !important;
+    }
+
+    .form-group {
+        width: 100% !important;
+        margin-bottom: 1.25rem !important;
+    }
+
+    .form-control {
+        font-size: 16px !important;
+        /* Prevents auto-zoom on iOS */
+        padding: 0.8rem 1rem !important;
+    }
+
+    .btn {
+        padding: 0.8rem 1.5rem !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* Fix inline-styled form items that should stack */
+    [style*="align-items: flex-end"] {
+        align-items: stretch !important;
+    }
+
+    [style*="display: flex"][style*="gap"] {
+        flex-direction: column !important;
+    }
+
+    /* Small exceptions for side-by-side small inputs like range min/max */
+    [style*="display: flex"] input[style*="width: 60px"] {
+        width: 100% !important;
+    }
+
+    [style*="display: flex"]:has(input[style*="width: 60px"]) {
+        flex-direction: row !important;
+        gap: 0.5rem !important;
+    }
+}
+
+/* --- Table Responsiveness --- */
+.table-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    background: white;
+    border-radius: var(--radius-md) !important;
+    margin: 1rem 0;
+    width: 100%;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .table-container {
+        margin: 1rem -1rem;
+        /* Visual full-width on mobile */
+        border-radius: 0 !important;
+        border-right: none;
+        border-left: none;
+    }
+
+    table {
+        min-width: 600px;
+        /* Force scroll */
+    }
+
+    th,
+    td {
+        padding: 1rem 0.75rem !important;
+        font-size: 0.85rem !important;
+    }
+}
+
+/* --- Results Page Specifics (Results Matrix etc) --- */
+@media (max-width: 768px) {
+
+    /* Major Award Cards */
+    .dashboard-grid:has([style*="Major Awards"]) {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Overall Champion Card */
+    [style*="linear-gradient(135deg, #4f46e5"] {
+        padding: 2rem 1.5rem !important;
+    }
+
+    [style*="linear-gradient(135deg, #4f46e5"] h2 {
+        font-size: 2rem !important;
+    }
+
+    [style*="linear-gradient(135deg, #4f46e5"] [style*="font-size: 2.5rem"] {
+        font-size: 1.75rem !important;
+    }
+
+    /* Table headers in results matrix */
+    table#team_table th {
+        font-size: 0.65rem !important;
+        padding: 0.75rem 0.5rem !important;
+    }
+}
+
+/* --- Login Page Optimization --- */
+@media (max-width: 480px) {
+    .login-page {
+        padding: 1rem !important;
+    }
+
+    .login-card {
+        padding: 2.5rem 1.5rem !important;
+        border-radius: var(--radius-lg) !important;
+    }
+
+    .login-logo {
+        width: 70px !important;
+        height: 70px !important;
+        border-radius: 16px !important;
+    }
+
+    .login-card h1 {
+        font-size: 1.75rem !important;
+    }
+}
+
+/* --- Misc Helper Overrides --- */
+@media (max-width: 768px) {
+    [style*="display: flex"][style*="justify-content: space-between"] {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+    }
+
+    [style*="flex-wrap: wrap"] {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    /* Fixed pixel buttons often used in forms */
+    button[style*="width: 44px"],
+    button[style*="width: 32px"],
+    button[style*="width: 36px"] {
+        width: 44px !important;
+        /* Keep small action buttons small if they are circular/square */
+        height: 44px !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Except when they are the primary action button in a form select+button combo */
+    form [style*="display: flex"] button[style*="width: 44px"] {
+        width: 100% !important;
+        margin-top: 0.5rem;
+    }
+
+    /* Team Matrix Support */
+    .stat-card [style*="display: flex"][style*="justify-content: space-between"] {
+        flex-direction: row !important;
+        /* Keep title and delete button on same line */
+        align-items: flex-start !important;
+    }
+
+    .stat-card [style*="display: grid"][style*="gap: 0.75rem"] {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Roster and Outputs Tags */
+    [style*="display: flex"][style*="flex-wrap: wrap"] {
+        flex-direction: row !important;
+        /* Keep tags wrapping naturally */
+        flex-wrap: wrap !important;
+    }
+
+    /* User Avatar Scaling */
+    .user-avatar {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1rem !important;
+    }
+
+    /* Scoring Wizard Optimizations */
+    .step-header {
+        overflow-x: auto !important;
+        gap: 0.5rem !important;
+        padding-bottom: 1rem !important;
+        justify-content: flex-start !important;
+    }
+
+    .step-item {
+        min-width: 80px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .criterion-card {
+        padding: 1.25rem !important;
+    }
+
+    .criterion-card [style*="display:flex"][style*="justify-content:space-between"],
+    .criterion-card [style*="display: flex"][style*="justify-content: space-between"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .criterion-card [style*="max-width: 70%"] {
+        max-width: 100% !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Range + Number Input Container */
+    .criterion-card [style*="display: flex"][style*="gap: 2rem"],
+    .criterion-card [style*="display: flex"][style*="gap: 1.5rem"] {
+        flex-direction: column !important;
+        gap: 1.25rem !important;
+        padding: 1rem !important;
+    }
+
+    .criterion-card input[type="number"] {
+        width: 100% !important;
+        height: 50px !important;
+    }
+
+    /* Sticky Assets Bar */
+    .sticky-assets {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        justify-content: flex-start !important;
+        margin: -1.5rem -1rem 1.5rem -1rem !important;
+        padding: 0.75rem 0.5rem !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .asset-pill {
+        flex-shrink: 0 !important;
+        padding: 0.4rem 0.75rem !important;
+    }
+
+    /* Pagination Controls */
+    .pagination-controls {
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+
+    /* Final Review Step */
+    [style*="grid-template-columns: repeat(auto-fit, minmax(200px"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Alert scaling */
+    .alert {
+        padding: 1rem !important;
+        font-size: 0.85rem !important;
+        flex-direction: row !important;
+        /* Keep icons side by side */
+        align-items: flex-start !important;
+    }
+}
+
+/* --- Scrollbar styling for touch --- */
+.table-container::-webkit-scrollbar {
+    height: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}

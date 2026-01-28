@@ -426,13 +426,6 @@ render_navbar($_SESSION['full_name'], 'panelist');
 
         <!-- Step 2: Consolidated Evaluation -->
         <div class="form-step" id="step-2">
-            <div style="background: var(--primary-subtle); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--primary);">
-                <h2 style="margin: 0; font-size: 1.5rem; color: var(--primary-dark); display: flex; align-items: center; gap: 0.75rem;">
-                    <span>📊</span> Full Project Assessment
-                </h2>
-                <p style="margin: 0.5rem 0 0; color: var(--primary); font-size: 0.875rem; font-weight: 600;">All group and individual criteria are listed below. Please complete all fields before proceeding.</p>
-            </div>
-
             <section id="group-evaluation" style="margin-bottom: 5rem;">
                 <div style="margin-bottom: 3rem;">
                     <h3 style="font-size: 1.25rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); display: flex; align-items: center; gap: 0.75rem;">

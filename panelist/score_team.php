@@ -25,8 +25,8 @@ $stmt_lock->execute([$team_id, $panelist_id]);
 $lock_status = $stmt_lock->fetch();
 $is_locked = $lock_status && $lock_status['is_locked'];
 
-// Data Fetching logic (same as before)
-$group_criteria = $pdo->prepare("SELECT * FROM criteria WHERE event_id = ? AND type = 'group' ORDER BY category DESC, display_order ASC");
+// Data Fetching logic
+$group_criteria = $pdo->prepare("SELECT * FROM criteria WHERE event_id = ? AND type = 'group' ORDER BY category, display_order ASC");
 $group_criteria->execute([$team['event_id']]);
 $group_criteria = $group_criteria->fetchAll();
 
@@ -35,7 +35,7 @@ foreach($group_criteria as $c) {
     $grouped_group_criteria[($c['category'] ?: 'General')][] = $c;
 }
 
-$ind_criteria = $pdo->prepare("SELECT * FROM criteria WHERE event_id = ? AND type = 'individual' ORDER BY display_order ASC");
+$ind_criteria = $pdo->prepare("SELECT * FROM criteria WHERE event_id = ? AND type = 'individual' ORDER BY category, display_order ASC");
 $ind_criteria->execute([$team['event_id']]);
 $ind_criteria = $ind_criteria->fetchAll();
 
@@ -202,18 +202,61 @@ render_navbar($_SESSION['full_name'], 'panelist');
         display: block;
     }
 
-    .criterion-card {
-        border: 2px solid transparent;
+    .criterion-row {
+        padding: 2.5rem;
         transition: all 0.3s;
-        transform: translateY(0);
+        border-bottom: 1px solid var(--border);
+        position: relative;
     }
-    .criterion-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg);
+    .criterion-row:last-child {
+        border-bottom: none;
     }
-    .criterion-card.active {
-        border-color: var(--primary);
-        background: #f0f7ff;
+    .criterion-row:hover {
+        background: #fafafa;
+    }
+    .criterion-row.active {
+        background: #f8fbff;
+        border-left: 4px solid var(--primary);
+        padding-left: calc(2.5rem - 4px);
+    }
+
+    .category-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border);
+        overflow: hidden;
+        margin-bottom: 4rem;
+    }
+    .category-header {
+        background: var(--light);
+        padding: 1.25rem 2.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .category-badge {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        background: var(--primary-subtle);
+        padding: 0.4rem 1rem;
+        border-radius: 50px;
+    }
+
+    /* Individual items refinement */
+    .member-card {
+        margin-bottom: 4rem;
+    }
+    .ind-criterion-row {
+        padding: 1.5rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .ind-criterion-row:last-child {
+        border-bottom: none;
     }
 
     @keyframes slideUp {
@@ -309,14 +352,10 @@ render_navbar($_SESSION['full_name'], 'panelist');
         </div>
         <div class="step-item" id="step-nav-2">
             <div class="step-circle">2</div>
-            <div class="step-label">Group</div>
+            <div class="step-label">Scoring</div>
         </div>
         <div class="step-item" id="step-nav-3">
             <div class="step-circle">3</div>
-            <div class="step-label">Students</div>
-        </div>
-        <div class="step-item" id="step-nav-4">
-            <div class="step-circle">4</div>
             <div class="step-label">Review</div>
         </div>
     </div>
@@ -385,145 +424,168 @@ render_navbar($_SESSION['full_name'], 'panelist');
             </div>
         </div>
 
-        <!-- Step 2: Group Evaluation -->
+        <!-- Step 2: Consolidated Evaluation -->
         <div class="form-step" id="step-2">
-            <h2 style="margin: 0 0 2rem; font-size: 1.75rem; letter-spacing: -0.01em;">Part 1: Performance Matrix</h2>
-            
-            <?php foreach($grouped_group_criteria as $category => $criteria): ?>
-                <div style="margin-bottom: 3rem;">
-                    <div style="margin-bottom: 1.5rem; border-bottom: 2px solid var(--primary-subtle); padding-bottom: 0.5rem;">
-                        <span style="font-size: 0.8125rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em;">
-                            Category: <?= htmlspecialchars($category) ?>
-                        </span>
-                    </div>
+            <div style="background: var(--primary-subtle); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--primary);">
+                <h2 style="margin: 0; font-size: 1.5rem; color: var(--primary-dark); display: flex; align-items: center; gap: 0.75rem;">
+                    <span>📊</span> Full Project Assessment
+                </h2>
+                <p style="margin: 0.5rem 0 0; color: var(--primary); font-size: 0.875rem; font-weight: 600;">All group and individual criteria are listed below. Please complete all fields before proceeding.</p>
+            </div>
 
-                    <div style="display: grid; gap: 1.5rem;">
-                        <?php foreach($criteria as $c): $val = $existing_scores[$c['id']] ?? ''; ?>
-                            <div class="card criterion-card" style="padding: 2rem; background: white;" onclick="highlightCriterion(this)">
-                                <div style="display:flex; justify-content:space-between; margin-bottom: 1.5rem; align-items: flex-start;">
-                                    <div style="max-width: 70%;">
-                                        <h4 style="margin: 0; font-size: 1.25rem; color: var(--primary-dark);"><?= htmlspecialchars($c['criteria_name']) ?></h4>
-                                        <p style="color: var(--text-light); margin-top: 0.5rem; font-size: 0.9375rem; line-height: 1.5;"><?= htmlspecialchars($c['description'] ?: 'Please rate the team based on official performance standards.') ?></p>
-                                    </div>
-                                    <div style="text-align: right; background: var(--light); padding: 1rem; border-radius: 12px; min-width: 100px;">
-                                        <span style="font-size: 0.7rem; color: var(--text-light); font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 4px;">Max Rails</span>
-                                        <div style="font-weight: 800; color: var(--primary); font-size: 1.5rem;"><?= $c['max_score'] ?></div>
-                                        <span style="font-size: 0.65rem; color: var(--text-light); font-weight: 600;">Weight: <?= (float)$c['weight'] ?>%</span>
-                                    </div>
-                                </div>
-                                
-                                <div style="display: flex; align-items: center; gap: 2rem; background: var(--light); padding: 1.5rem; border-radius: 16px;">
-                                    <div style="flex: 1; display: flex; align-items: center; gap: 1rem;">
-                                        <span style="font-size: 1.25rem; font-weight: 800; color: var(--text-light); min-width: 20px;"><?= $c['min_score'] ?></span>
-                                        <input type="range" style="flex: 1; height: 8px; cursor: pointer;" 
-                                               min="<?= $c['min_score'] ?>" max="<?= $c['max_score'] ?>" 
-                                               step="0.01"
-                                               value="<?= $val !== '' ? $val : $c['min_score'] ?>" 
-                                               oninput="updateScoreValue(this, <?= $c['id'] ?>)"
-                                               <?= $is_locked ? 'disabled' : '' ?>>
-                                        <span style="font-size: 1.25rem; font-weight: 800; color: var(--text-light); min-width: 20px;"><?= $c['max_score'] ?></span>
+            <section id="group-evaluation" style="margin-bottom: 5rem;">
+                <div style="margin-bottom: 3rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">A</span>
+                        Group Performance Matrix
+                    </h3>
+                    <p style="color: var(--text-light); font-size: 0.875rem; margin-top: 0.5rem; margin-left: 3rem;">Evaluate the team's overall project quality and presentation effectiveness.</p>
+                </div>
+                
+                <?php foreach($grouped_group_criteria as $category => $criteria): ?>
+                    <div class="category-card">
+                        <div class="category-header">
+                            <span class="category-badge">Category: <?= htmlspecialchars($category) ?></span>
+                            <span style="font-size: 0.75rem; color: var(--text-light); font-weight: 600;"><?= count($criteria) ?> Criteria</span>
+                        </div>
+
+                        <div class="criteria-list">
+                            <?php foreach($criteria as $c): $val = $existing_scores[$c['id']] ?? ''; ?>
+                                <div class="criterion-row" onclick="highlightCriterion(this)">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom: 2rem; align-items: flex-start;">
+                                        <div style="max-width: 65%;">
+                                            <h4 style="margin: 0; font-size: 1.35rem; color: var(--primary-dark); font-weight: 800;"><?= htmlspecialchars($c['criteria_name']) ?></h4>
+                                            <p style="color: var(--text-light); margin-top: 0.75rem; font-size: 1rem; line-height: 1.6;"><?= htmlspecialchars($c['description'] ?: 'Please rate the team based on official performance standards.') ?></p>
+                                        </div>
+                                        <div style="text-align: right; background: var(--light); padding: 1.25rem; border-radius: 16px; min-width: 120px; border: 1px solid var(--border);">
+                                            <span style="font-size: 0.65rem; color: var(--text-light); font-weight: 800; text-transform: uppercase; display: block; margin-bottom: 6px; letter-spacing: 0.05em;">Maximum Rails</span>
+                                            <div style="font-weight: 900; color: var(--primary); font-size: 1.75rem; line-height: 1;"><?= $c['max_score'] ?></div>
+                                            <div style="height: 1px; background: var(--border); margin: 0.75rem 0;"></div>
+                                            <span style="font-size: 0.7rem; color: var(--text-main); font-weight: 700;">Weight: <?= (float)$c['weight'] ?>%</span>
+                                        </div>
                                     </div>
                                     
-                                    <div style="position: relative;">
-                                        <input type="number" name="g_score_<?= $c['id'] ?>" id="g_score_<?= $c['id'] ?>"
-                                               style="width: 110px; height: 60px; text-align: center; font-size: 1.5rem; font-weight: 900; border: 3px solid var(--primary); color: var(--primary); border-radius: 12px; background: white;"
-                                               min="<?= $c['min_score'] ?>" max="<?= $c['max_score'] ?>" 
-                                               step="0.01"
-                                               value="<?= $val ?>" 
-                                               oninput="updateRangeValue(this, <?= $c['id'] ?>)"
-                                               <?= $is_locked ? 'readonly' : '' ?> required placeholder="-">
+                                    <div style="display: flex; align-items: center; gap: 2.5rem; background: var(--light); padding: 2rem; border-radius: 20px; border: 1px solid var(--border);">
+                                        <div style="flex: 1; display: flex; align-items: center; gap: 1.5rem;">
+                                            <span style="font-size: 1.125rem; font-weight: 800; color: var(--text-light); min-width: 25px; text-align: center;"><?= $c['min_score'] ?></span>
+                                            <div style="flex: 1; position: relative; height: 12px; display: flex; align-items: center;">
+                                                <input type="range" 
+                                                       style="width: 100%; cursor: pointer;" 
+                                                       min="<?= $c['min_score'] ?>" max="<?= $c['max_score'] ?>" 
+                                                       step="0.01"
+                                                       value="<?= $val !== '' ? $val : $c['min_score'] ?>" 
+                                                       oninput="updateScoreValue(this, <?= $c['id'] ?>)"
+                                                       <?= $is_locked ? 'disabled' : '' ?>>
+                                            </div>
+                                            <span style="font-size: 1.125rem; font-weight: 800; color: var(--text-light); min-width: 25px; text-align: center;"><?= $c['max_score'] ?></span>
+                                        </div>
+                                        
+                                        <div style="position: relative;">
+                                            <input type="number" name="g_score_<?= $c['id'] ?>" id="g_score_<?= $c['id'] ?>"
+                                                   style="width: 120px; height: 70px; text-align: center; font-size: 1.75rem; font-weight: 900; border: 3px solid var(--primary); color: var(--primary); border-radius: 16px; background: white; box-shadow: var(--shadow-sm);"
+                                                   min="<?= $c['min_score'] ?>" max="<?= $c['max_score'] ?>" 
+                                                   step="0.01"
+                                                   value="<?= $val ?>" 
+                                                   oninput="updateRangeValue(this, <?= $c['id'] ?>)"
+                                                   <?= $is_locked ? 'readonly' : '' ?> required placeholder="-">
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="margin-top: 2rem;">
+                                        <label style="font-size: 0.75rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.05em;">
+                                            <span>💬</span> Evaluator Feedback
+                                        </label>
+                                        <textarea name="g_comment_<?= $c['id'] ?>" 
+                                                  style="width: 100%; border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; font-size: 1rem; resize: vertical; min-height: 80px; transition: border-color 0.2s;" 
+                                                  placeholder="Tell the team what they did well or where they can improve..."
+                                                  <?= $is_locked ? 'readonly' : '' ?>><?= htmlspecialchars($existing_comments[$c['id']] ?? '') ?></textarea>
                                     </div>
                                 </div>
-                                
-                                <div style="margin-top: 1.5rem;">
-                                    <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.5rem; display: block;">Evaluator Feedback</label>
-                                    <textarea name="g_comment_<?= $c['id'] ?>" 
-                                              style="width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 1rem; font-size: 0.9375rem; resize: none;" 
-                                              rows="2" placeholder="Tell the team what they did well or where they can improve..."
-                                              <?= $is_locked ? 'readonly' : '' ?>><?= htmlspecialchars($existing_comments[$c['id']] ?? '') ?></textarea>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </section>
+
+            <section id="individual-evaluation" style="margin-bottom: 5rem;">
+                <div style="margin-bottom: 3rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="width: 36px; height: 36px; background: var(--secondary); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">B</span>
+                        Student Panel Performance
+                    </h3>
+                    <p style="color: var(--text-light); font-size: 0.875rem; margin-top: 0.5rem; margin-left: 3rem;">Evaluate each member's individual contribution and mastery during the Q&A.</p>
+                </div>
+                
+                <div style="display: grid; gap: 3rem;">
+                    <?php foreach($members as $m): ?>
+                        <div class="category-card member-card">
+                            <div class="category-header" style="background: white; padding: 2rem 2.5rem; border-bottom: 1px solid var(--border);">
+                                <div style="display: flex; align-items: center; gap: 1.5rem;">
+                                    <div style="background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.5rem; box-shadow: var(--shadow-sm);">
+                                        <?= substr($m['member_name'], 0, 1) ?>
+                                    </div>
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.5rem; color: var(--dark); font-weight: 800;"><?= htmlspecialchars($m['member_name']) ?></h3>
+                                        <span class="category-badge" style="background: var(--light); color: var(--text-light); border: 1px solid var(--border); margin-top: 4px; display: inline-block;"><?= htmlspecialchars($m['role_in_project'] ?: 'Member') ?></span>
+                                    </div>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
-                    </div>
+
+                            <div style="padding: 0 2.5rem 2.5rem;">
+                                <?php foreach($ind_criteria as $ic): $ival = $existing_ind_scores[$m['id']][$ic['id']] ?? ''; ?>
+                                    <div class="ind-criterion-row" onclick="highlightCriterion(this)">
+                                         <div style="display:flex; justify-content:space-between; margin-bottom: 1.5rem; align-items: flex-end;">
+                                            <div>
+                                                <label style="font-size: 1.125rem; font-weight: 800; color: var(--primary-dark); display: block;"><?= htmlspecialchars($ic['criteria_name']) ?></label>
+                                                <?php if($ic['category']): ?>
+                                                    <span style="font-size: 0.65rem; color: var(--primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;"><?= htmlspecialchars($ic['category']) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <span style="font-size: 0.65rem; color: var(--text-light); font-weight: 800; text-transform: uppercase;">Range: <?= $ic['min_score'] ?> - <?= $ic['max_score'] ?></span>
+                                            </div>
+                                         </div>
+                                         
+                                         <div style="display: flex; align-items: center; gap: 2rem; background: var(--light); padding: 1.25rem; border-radius: 16px; border: 1px solid var(--border);">
+                                            <input type="range" style="flex: 1;" min="<?= $ic['min_score'] ?>" max="<?= $ic['max_score'] ?>" 
+                                                   step="0.01"
+                                                   value="<?= $ival !== '' ? $ival : $ic['min_score'] ?>" 
+                                                   oninput="updateIndScoreValue(this, <?= $m['id'] ?>, <?= $ic['id'] ?>)"
+                                                   <?= $is_locked ? 'disabled' : '' ?>>
+                                                   
+                                            <input type="number" name="i_score_<?= $m['id'] ?>_<?= $ic['id'] ?>" id="i_score_<?= $m['id'] ?>_<?= $ic['id'] ?>"
+                                                   style="width: 100px; height: 56px; text-align: center; font-weight: 900; border: 2px solid var(--primary); border-radius: 12px; font-size: 1.5rem; color: var(--primary); background: white;"
+                                                   min="<?= $ic['min_score'] ?>" max="<?= $ic['max_score'] ?>" 
+                                                   step="0.01"
+                                                   value="<?= $ival ?>" 
+                                                   oninput="updateIndRangeValue(this, <?= $m['id'] ?>, <?= $ic['id'] ?>)"
+                                                   <?= $is_locked ? 'readonly' : '' ?> required placeholder="-">
+                                         </div>
+                                         <textarea name="i_comment_<?= $m['id'] ?>_<?= $ic['id'] ?>" 
+                                                style="width: 100%; margin-top: 1rem; border: 1px solid var(--border); border-radius: 12px; padding: 1rem; font-size: 0.9375rem; background: white; resize: none;" 
+                                                placeholder="Remarks on performance..."
+                                                rows="1"
+                                                <?= $is_locked ? 'readonly' : '' ?>><?= htmlspecialchars($existing_ind_comments[$m['id']][$ic['id']] ?? '') ?></textarea>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-            <?php endforeach; ?>
+            </section>
 
             <div class="pagination-controls">
                 <button type="button" class="btn btn-secondary" onclick="changeStep(1)" style="padding: 0.75rem 2rem; border-radius: 50px;">
                     &larr; Back to Assets
                 </button>
                 <button type="button" class="btn btn-primary" onclick="changeStep(3)" style="padding: 0.75rem 2rem; border-radius: 50px;">
-                    Continue to Individual Performance &rarr;
-                </button>
-            </div>
-        </div>
-
-        <!-- Step 3: Individual Evaluation -->
-        <div class="form-step" id="step-3">
-            <h2 style="margin: 0 0 2rem; font-size: 1.75rem; letter-spacing: -0.01em;">Part 2: Student Panel Performance</h2>
-            <div style="display: grid; gap: 3rem;">
-                <?php foreach($members as $m_index => $m): ?>
-                    <div class="card criterion-card" style="padding: 2.5rem; border-left: 6px solid var(--primary-light);" onclick="highlightCriterion(this)">
-                        <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
-                            <div style="background: var(--primary-light); color: white; width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.75rem; box-shadow: var(--shadow-sm);">
-                                <?= substr($m['member_name'], 0, 1) ?>
-                            </div>
-                            <div>
-                                <h3 style="margin: 0; font-size: 1.5rem; color: var(--dark);"><?= htmlspecialchars($m['member_name']) ?></h3>
-                                <span style="font-size: 0.875rem; color: var(--text-light); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;"><?= htmlspecialchars($m['role_in_project'] ?: 'Lead / Coordinator') ?></span>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; gap: 2rem;">
-                            <?php foreach($ind_criteria as $ic): $ival = $existing_ind_scores[$m['id']][$ic['id']] ?? ''; ?>
-                                <div style="background: var(--light); padding: 1.75rem; border-radius: 16px; border: 1px solid var(--border);">
-                                     <div style="display:flex; justify-content:space-between; margin-bottom: 1rem; align-items: center;">
-                                        <label style="font-size: 1.05rem; font-weight: 700; color: var(--primary-dark);"><?= htmlspecialchars($ic['criteria_name']) ?></label>
-                                        <div style="background: white; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 0.75rem; font-weight: 700; color: var(--text-light);">
-                                            Range: <?= $ic['min_score'] ?> &mdash; <?= $ic['max_score'] ?>
-                                        </div>
-                                     </div>
-                                     
-                                     <div style="display: flex; align-items: center; gap: 1.5rem;">
-                                        <input type="range" style="flex: 1; height: 6px;" min="<?= $ic['min_score'] ?>" max="<?= $ic['max_score'] ?>" 
-                                               step="0.01"
-                                               value="<?= $ival !== '' ? $ival : $ic['min_score'] ?>" 
-                                               oninput="updateIndScoreValue(this, <?= $m['id'] ?>, <?= $ic['id'] ?>)"
-                                               <?= $is_locked ? 'disabled' : '' ?>>
-                                               
-                                        <input type="number" name="i_score_<?= $m['id'] ?>_<?= $ic['id'] ?>" id="i_score_<?= $m['id'] ?>_<?= $ic['id'] ?>"
-                                               style="width: 90px; height: 50px; text-align: center; font-weight: 900; border: 2px solid var(--primary); border-radius: 10px; font-size: 1.25rem; color: var(--primary); background: white;"
-                                               min="<?= $ic['min_score'] ?>" max="<?= $ic['max_score'] ?>" 
-                                               step="0.01"
-                                               value="<?= $ival ?>" 
-                                               oninput="updateIndRangeValue(this, <?= $m['id'] ?>, <?= $ic['id'] ?>)"
-                                               <?= $is_locked ? 'readonly' : '' ?> required placeholder="-">
-                                     </div>
-                                     <textarea name="i_comment_<?= $m['id'] ?>_<?= $ic['id'] ?>" 
-                                            style="width: 100%; margin-top: 1rem; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; font-size: 0.875rem; background: white;" 
-                                            placeholder="Remarks on individual presentation performance..."
-                                            rows="1"
-                                            text="<?= htmlspecialchars($existing_ind_comments[$m['id']][$ic['id']] ?? '') ?>"
-                                            <?= $is_locked ? 'readonly' : '' ?>><?= htmlspecialchars($existing_ind_comments[$m['id']][$ic['id']] ?? '') ?></textarea>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-
-            <div class="pagination-controls">
-                <button type="button" class="btn btn-secondary" onclick="changeStep(2)" style="padding: 0.75rem 2rem; border-radius: 50px;">
-                    &larr; Back to Matrix
-                </button>
-                <button type="button" class="btn btn-primary" onclick="changeStep(4)" style="padding: 0.75rem 2rem; border-radius: 50px;">
                     Review Final Results &rarr;
                 </button>
             </div>
         </div>
 
-        <!-- Step 4: Review and Finalize -->
-        <div class="form-step" id="step-4">
+        <!-- Step 3: Review and Finalize -->
+        <div class="form-step" id="step-3">
             <div class="card" style="text-align: center; padding: 4rem 2.5rem; border-top: 4px solid var(--success);">
                 <div style="font-size: 4rem; margin-bottom: 1.5rem;">📋</div>
                 <h2 style="font-size: 2rem; color: var(--primary-dark); margin-bottom: 1rem;">Ready to Finalize?</h2>
@@ -560,9 +622,9 @@ render_navbar($_SESSION['full_name'], 'panelist');
         // Show target step
         document.getElementById('step-' + step).classList.add('active');
         
-        // Toggle persistent assets bar (show only during actual scoring steps 2 and 3)
+        // Toggle persistent assets bar (show only during actual scoring step 2)
         const assetsBar = document.getElementById('persistentAssets');
-        if (step === 2 || step === 3) {
+        if (step === 2) {
             assetsBar.style.display = 'flex';
         } else {
             assetsBar.style.display = 'none';
@@ -586,7 +648,7 @@ render_navbar($_SESSION['full_name'], 'panelist');
     }
 
     function highlightCriterion(card) {
-        document.querySelectorAll('.criterion-card').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.criterion-row, .ind-criterion-row').forEach(c => c.classList.remove('active'));
         card.classList.add('active');
     }
 

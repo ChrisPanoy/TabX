@@ -45,6 +45,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          $pdo->prepare("DELETE FROM criteria WHERE id = ?")->execute([$cid]);
     }
     
+    if (isset($_POST['add_category'])) {
+        $cat_name = sanitize($_POST['category_name']);
+        if (!empty($cat_name)) {
+            $stmt_check = $pdo->prepare("SELECT id FROM rubric_categories WHERE category_name = ? AND event_id = ?");
+            $stmt_check->execute([$cat_name, $event_id]);
+            if (!$stmt_check->fetch()) {
+                $pdo->prepare("INSERT INTO rubric_categories (event_id, category_name) VALUES (?, ?)")
+                    ->execute([$event_id, $cat_name]);
+            }
+        }
+    }
+    
+    if (isset($_POST['edit_category'])) {
+        $cat_id = intval($_POST['category_id']);
+        $new_name = sanitize($_POST['new_name']);
+        
+        // Fetch old name first to update criteria
+        $stmt_old = $pdo->prepare("SELECT category_name FROM rubric_categories WHERE id = ? AND event_id = ?");
+        $stmt_old->execute([$cat_id, $event_id]);
+        $old_name = $stmt_old->fetchColumn();
+
+        if ($old_name && !empty($new_name)) {
+            $pdo->prepare("UPDATE rubric_categories SET category_name = ? WHERE id = ?")->execute([$new_name, $cat_id]);
+            // Update all criteria using this name
+            $pdo->prepare("UPDATE criteria SET category = ? WHERE category = ? AND event_id = ?")->execute([$new_name, $old_name, $event_id]);
+        }
+    }
+
+    if (isset($_POST['remove_category'])) {
+        $cat_id = $_POST['category_id'];
+        $pdo->prepare("DELETE FROM rubric_categories WHERE id = ? AND event_id = ?")
+            ->execute([$cat_id, $event_id]);
+    }
+
     if (isset($_POST['import_template'])) {
         $templates = $pdo->query("SELECT * FROM criteria WHERE event_id IS NULL")->fetchAll();
         $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM criteria WHERE event_id = ? AND criteria_name = ? AND type = ?");
@@ -53,13 +87,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach($templates as $t) {
             $stmt_check->execute([$event_id, $t['criteria_name'], $t['type']]);
             if ($stmt_check->fetchColumn() == 0) {
-                $stmt_ins->execute([$t['criteria_name'], $t['weight'], $event_id, $t['type'], $t['category'] ?? 'General', $t['min_score'], $t['max_score']]);
+                // Ensure the category exists in rubric_categories too
+                $cname = $t['category'] ?? 'General';
+                $stmt_cat = $pdo->prepare("SELECT id FROM rubric_categories WHERE category_name = ? AND (event_id = ? OR is_default = 1)");
+                $stmt_cat->execute([$cname, $event_id]);
+                if (!$stmt_cat->fetch()) {
+                    $pdo->prepare("INSERT INTO rubric_categories (event_id, category_name) VALUES (?, ?)")->execute([$event_id, $cname]);
+                }
+                $stmt_ins->execute([$t['criteria_name'], $t['weight'], $event_id, $t['type'], $cname, $t['min_score'], $t['max_score']]);
             }
         }
     }
 }
 
 // Data Fetching
+$categories = $pdo->prepare("SELECT * FROM rubric_categories WHERE event_id = ? OR is_default = 1 ORDER BY is_default DESC, category_name ASC");
+$categories->execute([$event_id]);
+$categories = $categories->fetchAll();
 $criteria_list = $pdo->prepare("SELECT * FROM criteria WHERE event_id = ? ORDER BY type, category, display_order");
 $criteria_list->execute([$event_id]);
 $criteria_list = $criteria_list->fetchAll();
@@ -94,9 +138,7 @@ render_navbar($_SESSION['full_name'], 'dean');
 <div class="container" style="margin-top: 3rem; padding-bottom: 5rem;">
     <div class="page-header" style="margin-bottom: 3rem;">
         <div>
-            <a href="events.php" style="color: var(--primary); font-weight: 700; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; text-decoration: none;">
-                <span>&larr;</span> Back to Events
-            </a>
+       
             <h1 style="font-size: 2.25rem; letter-spacing: -0.02em;"><?= htmlspecialchars($event['title']) ?> Configuration</h1>
             <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem;">
                  <span style="color: var(--text-light);"><?= date('F j, Y', strtotime($event['event_date'])) ?></span>
@@ -104,10 +146,7 @@ render_navbar($_SESSION['full_name'], 'dean');
                  <span style="color: var(--text-light);"><?= htmlspecialchars($event['venue']) ?></span>
             </div>
         </div>
-        <div style="background: var(--primary-subtle); padding: 0.75rem 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--primary); display: flex; align-items: center; gap: 0.75rem;">
-             <span style="font-size: 1.25rem;">⚙️</span>
-             <strong style="color: var(--primary); font-size: 0.9375rem;">Event Management Mode</strong>
-        </div>
+
     </div>
 
 
@@ -138,11 +177,12 @@ render_navbar($_SESSION['full_name'], 'dean');
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light);">Category</label>
                 <select name="category" class="form-control" style="appearance: auto;">
-                    <option value="General">General/Defense</option>
-                    <option value="Manuscripts">Manuscripts</option>
-                    <option value="Poster">Poster</option>
-                    <option value="Brochure">Brochure</option>
-                    <option value="Teaser">Teaser</option>
+                    <?php foreach($categories as $cat): ?>
+                        <option value="<?= htmlspecialchars($cat['category_name']) ?>"><?= htmlspecialchars($cat['category_name']) ?></option>
+                    <?php endforeach; ?>
+                    <?php if(empty($categories)): ?>
+                        <option value="General">General</option>
+                    <?php endif; ?>
                 </select>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
@@ -221,10 +261,68 @@ render_navbar($_SESSION['full_name'], 'dean');
         </div>
     </div>
 
+    <div class="card" style="margin-bottom: 4rem; padding: 2.5rem; border-top: 5px solid var(--success);">
+        <div style="margin-bottom: 2rem;">
+            <h3 style="margin: 0; font-size: 1.5rem; letter-spacing: -0.01em;">2. Category Management</h3>
+            <p style="color: var(--text-light); margin-top: 0.25rem;">Add custom categories for your event criteria.</p>
+        </div>
+
+        <form method="POST" style="display: flex; gap: 1rem; margin-bottom: 2rem; background: var(--light); padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border); align-items: flex-end;">
+            <input type="hidden" name="add_category" value="1">
+            <div class="form-group" style="margin-bottom: 0; flex-grow: 1;">
+                <label class="form-label" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase;">New Category Name</label>
+                <input type="text" name="category_name" class="form-control" required placeholder="e.g. Technical, Design, Q&A">
+            </div>
+            <button type="submit" class="btn btn-primary" style="height: 46px; font-weight: 700;">Add Category</button>
+        </form>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+            <?php foreach($categories as $cat): ?>
+                <div style="background: white; border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: 50px; display: flex; align-items: center; gap: 0.6rem; box-shadow: var(--shadow-sm);">
+                    <span style="font-weight: 700; color: var(--text-main); font-size: 0.875rem;"><?= htmlspecialchars($cat['category_name']) ?></span>
+                    <?php if(!$cat['is_default']): ?>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; border-left: 1px solid var(--border); padding-left: 0.6rem; margin-left: 0.2rem;">
+                            <button type="button" 
+                                    onclick="editCategory(<?= $cat['id'] ?>, '<?= addslashes($cat['category_name']) ?>')"
+                                    style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.9rem; padding: 2px;"
+                                    title="Edit Category">✎</button>
+                            
+                            <form method="POST" style="display: inline;" onsubmit="return confirm('Remove this category?')">
+                                <input type="hidden" name="remove_category" value="1">
+                                <input type="hidden" name="category_id" value="<?= $cat['id'] ?>">
+                                <button type="submit" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 2px;" title="Delete Category">&times;</button>
+                            </form>
+                        </div>
+                    <?php else: ?>
+                        <span style="font-size: 0.65rem; color: var(--text-light); font-weight: 800; border-left: 1px solid var(--border); padding-left: 0.6rem; margin-left: 0.2rem;">DEFAULT</span>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- Hidden Edit Form -->
+    <form id="editCategoryForm" method="POST" style="display:none;">
+        <input type="hidden" name="edit_category" value="1">
+        <input type="hidden" name="category_id" id="edit_cat_id">
+        <input type="hidden" name="new_name" id="edit_cat_name">
+    </form>
+
+    <script>
+    function editCategory(id, currentName) {
+        const newName = prompt("Enter new name for category '" + currentName + "':", currentName);
+        if (newName && newName.trim() !== "" && newName !== currentName) {
+            document.getElementById('edit_cat_id').value = id;
+            document.getElementById('edit_cat_name').value = newName.trim();
+            document.getElementById('editCategoryForm').submit();
+        }
+    }
+    </script>
+
     <div class="card" style="padding: 2.5rem; border-top: 5px solid var(--secondary);">
         <div style="margin-bottom: 2.5rem;">
-            <h3 style="margin: 0; font-size: 1.5rem; letter-spacing: -0.01em;">2. Panelist Assignments</h3>
-            <p style="color: var(--text-light); margin-top: 0.25rem;">Distribute capstone groups to specific evaluation committees.</p>
+            <h3 style="margin: 0; font-size: 1.5rem; letter-spacing: -0.01em;">3. Panelist Assignments</h3>
+            <p style="color: var(--text-light); margin-top: 0.25rem;">Distribute competitors to specific evaluation committees.</p>
         </div>
         
         <div class="dashboard-grid">

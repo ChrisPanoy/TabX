@@ -17,7 +17,7 @@ $stmt->execute([$event_id]);
 $teams = $stmt->fetchAll();
 
 // Fetch Rubrics
-$stmt_crit = $pdo->prepare("SELECT criteria_name, category, weight, min_score, max_score FROM criteria WHERE event_id = ? ORDER BY type, category DESC, display_order");
+$stmt_crit = $pdo->prepare("SELECT criteria_name, category, weight, min_score, max_score FROM criteria WHERE event_id = ? ORDER BY type, category ASC, display_order");
 $stmt_crit->execute([$event_id]);
 $all_criteria = $stmt_crit->fetchAll();
 
@@ -85,7 +85,7 @@ foreach($all_criteria as $c) {
     <?php foreach($teams as $team): ?>
     <div class="sheet">
         <div class="header">
-            <h2>Capstone Evaluation Sheet</h2>
+            <h2>Competition Evaluation Sheet</h2>
             <h3><?= htmlspecialchars($event['title']) ?></h3>
             <p style="margin-top: 10px; font-weight: 500; font-size: 0.875rem; color: var(--text-light);">
                 📅 <?= date('F j, Y', strtotime($event['event_date'])) ?> &nbsp; | &nbsp; 📍 <?= htmlspecialchars($event['venue']) ?>
@@ -155,7 +155,7 @@ foreach($all_criteria as $c) {
 
         <div class="signature-area">
              <div style="font-size: 0.7rem; color: var(--text-light); max-width: 300px;">
-                * This document serves as an official grading record for the Capstone project defense. Please ensure all fields are computed accurately before signing.
+                * This document serves as an official grading record for the evaluation. Please ensure all fields are computed accurately before signing.
              </div>
             <div class="sig-box">
                 Signature over Printed Name
